@@ -1,0 +1,19 @@
+declare:
+  api_base_url: http://github.com/api/v2/
+  api_format: JSON
+  api_format_mode: content-type
+methods:
+  user_information:
+    method: GET
+    path: /user/show/:username
+    params:
+      - username
+    required:
+      - username
+  user_following:
+    method: GET
+    path: /user/show/:user/followers
+    params:
+      - user
+    required:
+      - user
