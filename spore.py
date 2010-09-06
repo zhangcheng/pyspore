@@ -38,6 +38,33 @@ import json
 import yaml
 #import xml
 
+class SporeSpec(dict):
+    def __init__(self,url):
+        dict.__init__(self)
+        format = url.split(".")[1]
+        config = {}
+        raw = ""
+        try:
+            raw = open(url)
+        except:
+            try:
+                import urllib2
+                raw = urllib2.urlopen(url).read()
+            except:
+                raise Exception("couldn't open %s"%url)
+        
+        if format in ["yaml","yml","json"]:
+            try:
+                config = __import__(format).load(raw)
+            except Exception, e:
+                raise Exception("couldn't parse config file: %s"%(e))
+        else:
+            raise Exception("format %s not recognized"%format)
+            
+        for x in config:
+            self[x]=config[x]
+                   
+
 class SporeBody(object):
     implements(IBodyProducer)
 
@@ -120,18 +147,27 @@ class SporeRequest(object):
         reactor.stop()
 
 
-def usage(exc):
-    print exc
+def usage():
     print "USAGE : python spore.py config_file_path"
 
 if __name__ == "__main__":
     import getopt
     opts, args = getopt.getopt(sys.argv[1:],'')
+    
+    if len(args) < 1:
+        usage()
+        exit()  
+         
+    configURL = args[0]
+    
     try:
-        config = json.load(open(args[0],'rU'))
+        config = SporeSpec(configURL)
     except Exception, exc:
-        usage(exc)
+        print exc
+        usage()
         exit()
+        
+    print config
     # TODO : parse confFile and init every request
     head = SporeHeaders(config)
     SporeRequest(config, head, SporeParser)
