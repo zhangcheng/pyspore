@@ -45,19 +45,23 @@ class SporeSpec(dict):
         config = {}
         raw = ""
         try:
+            if url[:7] == "file://":
+                url = url[7:]
             raw = open(url)
         except:
             try:
                 import urllib2
                 raw = urllib2.urlopen(url).read()
-            except:
-                raise Exception("couldn't open %s"%url)
+            except  Exception, e:
+                raise Exception("couldn't open %s: %s"%(url,e))
         
         if format in ["yaml","yml","json"]:
             try:
                 config = __import__(format).load(raw)
             except Exception, e:
                 raise Exception("couldn't parse config file: %s"%(e))
+        elif format in ["xml"]:
+            raise NotImplemented()
         else:
             raise Exception("format %s not recognized"%format)
             
