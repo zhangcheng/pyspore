@@ -60,10 +60,8 @@ class SporeSpec(dict):
                 config = __import__(format).load(raw)
             except Exception, e:
                 raise Exception("couldn't parse config file: %s"%(e))
-        elif format in ["xml"]:
-            raise NotImplemented()
         else:
-            raise Exception("format %s not recognized"%format)
+            raise NotImplemented("format %s not recognized"%format)
 
         for x in config:
             self[x]=config[x]
@@ -93,6 +91,7 @@ class SporeAuth(object):
 class SporeParser(Protocol):
     def __init__(self, spec, deferred):
         """
+        Asynchrone data receiver and parser
         """
         self.deferred = deferred
         self.spec = spec
@@ -105,22 +104,28 @@ class SporeParser(Protocol):
 
         elif self.spec['declare']['api_format'] == "yaml":
             self._getdecoder("yaml", "load")
-
         else:
             raise NotImplemented("api_format %s not recognized"%self.spec['declare']['api_format'])
+        print self.decode
 
     def dataReceived(self, bytes):
         print "dataReceived"
         print bytes
-        print self.decode(bytes)
+        self.decode(bytes)
 
     def connectionLost(self, reason):
-        print 'Finished receiving body:', reason.getErrorMessage()
+        print 'Finished receiving body: ', reason.getErrorMessage()
         self.deferred.callback(None)
+
+    def decode(self, bytes):
+        """
+        default decode method
+        """
+        print bytes
 
     def _getdecoder(self, module, function):
         """
-        module import and return
+        module import and init the decode method
         """
         try:
             self.decode = __import__(module, globals(), locals(), [function], -1)
@@ -132,7 +137,7 @@ class SporeHeaders(Headers):
         Headers.__init__(self,
             {
                 'User-Agent': ['Pyspore Client Example'],
-                'Content-Type': [spec['declare']['api_format']]
+                'Content-Type': [str(spec['declare']['api_format'])]
             }
         )
 
@@ -146,19 +151,17 @@ class SporeRequest(object):
         self.headers = SporeHeaders(self.spec)
         # TODO body and authentication
         self.body = None
-        self.deferred = Deferred()
-        self.parser = SporeParser(self.spec, self.deferred)
-        self.url = self._geturl()
-        agent = Agent(reactor)
 
+        self.url = self._geturl()
         print self.url
 
-
+        agent = Agent(reactor)
         self.d = agent.request(
-            self.spec['methods'][methodname]['method'],
+            str(self.spec['methods'][methodname]['method']),
             self.url,
             self.headers,
-            self.body)
+            self.body
+        )
         self.d.addCallback(self.cbRequest)
         self.d.addBoth(self.cbShutdown)
         reactor.run()
@@ -172,14 +175,21 @@ class SporeRequest(object):
         print 'Response phrase:', response.phrase
         print 'Response headers:'
         print pformat(list(response.headers.getAllRawHeaders()))
-        # asynch handler
-        response.deliverBody(self.parser)
-        return self.deferred
+        # response asynchrone handler
+        deferred = Deferred()
+        response.deliverBody(SporeParser(self.spec, deferred))
+        return deferred
 
     def cbShutdown(self, ignored):
+        """
+        Tells the reator request is finished
+        """
         reactor.stop()
 
     def _geturl(self):
+        """
+        forms the request url
+        """
         if self.spec['declare']['api_format_mode'] == 'append':
             return str(self.spec['declare']['api_base_url'] +  self.spec['methods'][self.methodname]['path'] + "." + self.spec['declare']['api_format'])
         else:

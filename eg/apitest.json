@@ -1,0 +1,13 @@
+{
+   "methods" : {
+      "public_timeline" : {
+         "path" : "/statuses/public_timeline",
+         "method" : "GET"
+      }
+   },
+   "declare" : {
+      "api_base_url" : "http://api.twitter.com/1",
+      "api_format_mode" : "append",
+      "api_format" : "json"
+   }
+}
