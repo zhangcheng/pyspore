@@ -203,6 +203,7 @@ class SporeRequest(object):
         Tells the reator request is finished
         """
         reactor.stop()
+        #http://twistedmatrix.com/documents/current/core/howto/defer.html
         deserial = SporeDeserializer(self.spec, self.parser.content)
         deserial()
 
