@@ -122,6 +122,7 @@ class SporeDeserializer():
         return bytes
 
     def __call__(self, *args, **kwargs):
+        print self.decode(self.bytes)
         return self.decode(self.bytes)
 
 class SporeReceiver(Protocol):
@@ -202,7 +203,8 @@ class SporeRequest(object):
         Tells the reator request is finished
         """
         reactor.stop()
-        return SporeDeserializer(self.spec, self.parser.content)
+        deserial = SporeDeserializer(self.spec, self.parser.content)
+        deserial()
 
     def _geturl(self):
         """
