@@ -37,9 +37,16 @@ from twisted.web.http_headers import Headers
 import json
 import yaml
 #import xml
+from xml.dom.minidom import parseString as sporexmlparser
+from yaml import load as sporeyamlparser
+from json import loads as sporejsonparser
 
 class SporeSpec(dict):
     def __init__(self,url):
+        """
+        Net::HTTP::Spore::Spec importer
+        handle files adressed by path and optionally by protocol
+        """
         dict.__init__(self)
         format = url.split(".")[1]
         config = {}
@@ -88,49 +95,58 @@ class SporeRequestBody(object):
 class SporeAuth(object):
     pass
 
-class SporeParser(Protocol):
+class SporeFinished(Warning):
+    pass
+
+class SporeDeserializer():
+    def __init__(self, spec, bytes):
+        """
+        Data parser
+        """
+        self.spec = spec
+        self.bytes = bytes
+
+        if self.spec['declare']['api_format'] == "json":
+            self.decode = sporejsonparser
+        elif self.spec['declare']['api_format'] == "xml":
+            self.decode = sporexmlparser
+        elif self.spec['declare']['api_format'] == "yaml":
+            self.decode = sporeyamlparser
+        else:
+            raise NotImplemented("api_format %s not recognized"%self.spec['declare']['api_format'])
+
+    def decode(self, bytes):
+        """
+        default decode method
+        """
+        return bytes
+
+    def __call__(self, *args, **kwargs):
+        return self.decode(self.bytes)
+
+class SporeReceiver(Protocol):
     def __init__(self, spec, deferred):
         """
         Asynchrone data receiver and parser
         """
         self.deferred = deferred
         self.spec = spec
+        self.content = ""
 
-        if self.spec['declare']['api_format'] == "json":
-            self._getdecoder("json", "loads")
-
-        elif self.spec['declare']['api_format'] == "xml":
-            self._getdecoder("xml.dom.minidom", "parseString")
-
-        elif self.spec['declare']['api_format'] == "yaml":
-            self._getdecoder("yaml", "load")
-        else:
-            raise NotImplemented("api_format %s not recognized"%self.spec['declare']['api_format'])
-        print self.decode
 
     def dataReceived(self, bytes):
-        print "dataReceived"
-        print bytes
-        self.decode(bytes)
+        """
+        Callback on the data received event
+        """
+        self.content += bytes
 
     def connectionLost(self, reason):
-        print 'Finished receiving body: ', reason.getErrorMessage()
+        """
+        End of the request attached to the parser
+        """
+        #print 'Finished receiving body: ', reason.getErrorMessage()
         self.deferred.callback(None)
 
-    def decode(self, bytes):
-        """
-        default decode method
-        """
-        print bytes
-
-    def _getdecoder(self, module, function):
-        """
-        module import and init the decode method
-        """
-        try:
-            self.decode = __import__(module, globals(), locals(), [function], -1)
-        except Exception, e:
-            raise Exception("couldn't get spore parser : %s"%(e))
 
 class SporeHeaders(Headers):
     def __init__(self,spec):
@@ -177,7 +193,8 @@ class SporeRequest(object):
         print pformat(list(response.headers.getAllRawHeaders()))
         # response asynchrone handler
         deferred = Deferred()
-        response.deliverBody(SporeParser(self.spec, deferred))
+        self.parser = SporeReceiver(self.spec, deferred)
+        response.deliverBody(self.parser)
         return deferred
 
     def cbShutdown(self, ignored):
@@ -185,15 +202,17 @@ class SporeRequest(object):
         Tells the reator request is finished
         """
         reactor.stop()
+        return SporeDeserializer(self.spec, self.parser.content)
 
     def _geturl(self):
         """
         forms the request url
         """
+        url = self.spec['declare']['api_base_url'] + self.spec['methods'][self.methodname]['path']
         if self.spec['declare']['api_format_mode'] == 'append':
-            return str(self.spec['declare']['api_base_url'] +  self.spec['methods'][self.methodname]['path'] + "." + self.spec['declare']['api_format'])
+            return str( url + "." + self.spec['declare']['api_format'])
         else:
-            return str(self.spec['declare']['api_base_url'] +  self.spec['methods'][self.methodname]['path'])
+            return str(url)
 
 def usage():
     print "USAGE : python spore.py config_file_path"
@@ -217,4 +236,5 @@ if __name__ == "__main__":
 
     print spec
     # TODO : parse confFile for every method defined
-    SporeRequest(spec, "public_timeline")
+    req = SporeRequest(spec, "public_timeline")
+    print req
