@@ -33,10 +33,10 @@ from twisted.web.client import Agent
 # SporeHeaders
 from twisted.web.http_headers import Headers
 
-# supported deserialization
+# supported spec file formats
 import json
 import yaml
-#import xml
+# supported deserialization
 from xml.dom.minidom import parseString as sporexmlparser
 from yaml import load as sporeyamlparser
 from json import loads as sporejsonparser
@@ -44,7 +44,7 @@ from json import loads as sporejsonparser
 class SporeSpec(dict):
     def __init__(self,url):
         """
-        Net::HTTP::Spore::Spec importer
+        Spore reader
         handle files adressed by path and optionally by protocol
         """
         dict.__init__(self)
@@ -98,7 +98,7 @@ class SporeAuth(object):
 class SporeFinished(Warning):
     pass
 
-class SporeDeserializer():
+class SporeFormat():
     def __init__(self, spec, bytes):
         """
         Data parser
@@ -125,7 +125,7 @@ class SporeDeserializer():
         print self.decode(self.bytes)
         return self.decode(self.bytes)
 
-class SporeReceiver(Protocol):
+class SporeResponse(Protocol):
     def __init__(self, spec, deferred):
         """
         Asynchrone data receiver and parser
@@ -171,7 +171,7 @@ class SporeRequest(object):
 
         self.url = self._geturl()
         print self.url
-
+        # twisted stuff
         agent = Agent(reactor)
         self.d = agent.request(
             str(self.spec['methods'][methodname]['method']),
@@ -181,6 +181,8 @@ class SporeRequest(object):
         )
         self.d.addCallback(self.cbRequest)
         self.d.addBoth(self.cbShutdown)
+
+    def __call__(self, *args, **kwargs):
         reactor.run()
 
     def cbRequest(self, response):
@@ -194,7 +196,7 @@ class SporeRequest(object):
         print pformat(list(response.headers.getAllRawHeaders()))
         # response asynchrone handler
         deferred = Deferred()
-        self.parser = SporeReceiver(self.spec, deferred)
+        self.parser = SporeResponse(self.spec, deferred)
         response.deliverBody(self.parser)
         return deferred
 
@@ -204,7 +206,7 @@ class SporeRequest(object):
         """
         reactor.stop()
         #http://twistedmatrix.com/documents/current/core/howto/defer.html
-        deserial = SporeDeserializer(self.spec, self.parser.content)
+        deserial = SporeFormat(self.spec, self.parser.content)
         deserial()
 
     def _geturl(self):
@@ -216,6 +218,15 @@ class SporeRequest(object):
             return str( url + "." + self.spec['declare']['api_format'])
         else:
             return str(url)
+
+class SporeCore(object):
+    def __init__(self, path):
+        self.new_from_spec(path)
+
+    def new_from_spec(self, path):
+        self.spec = SporeSpec(path)
+        for methodname, methodspec in self.spec['methods'].iteritems():
+            setattr( self, methodname, SporeRequest(self.spec, methodname) )
 
 def usage():
     print "USAGE : python spore.py config_file_path"
@@ -231,13 +242,13 @@ if __name__ == "__main__":
     configURL = args[0]
 
     try:
-        spec = SporeSpec(configURL)
+        spore = SporeCore(configURL)
     except Exception, exc:
         print exc
         usage()
         exit()
 
-    print spec
+    print spore.spec
     # TODO : parse confFile for every method defined
-    req = SporeRequest(spec, "public_timeline")
+    req = spore.public_timeline()
     print req
