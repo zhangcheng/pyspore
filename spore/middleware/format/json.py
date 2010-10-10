@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 # -*- coding: utf-8 -*-
 #  Copyright (C) 2010 Elias Showk
 #
@@ -18,32 +16,10 @@
 
 __author__="elishowk@nonutc.fr"
 
-import getopt
-import sys
+import json
+from json import loads as decode
 
-import spore
+from spore.middleware.format import SporeFormat
 
-def usage():
-    print "USAGE : python spore.py config_file_path"
-
-if __name__ == "__main__":
-
-    opts, args = getopt.getopt(sys.argv[1:],'')
-
-    if len(args) < 1:
-        usage()
-        exit()
-
-    configURL = args[0]
-
-    try:
-        spore_instance = spore.SporeCore(configURL)
-    except Exception, exc:
-        print exc
-        usage()
-        exit()
-
-    print spore_instance.spec
-    # TODO : parse confFile for every method defined
-    req = spore_instance.public_timeline()
-    print req
+class JSON(SporeFormat):
+    pass

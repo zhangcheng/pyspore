@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 # -*- coding: utf-8 -*-
 #  Copyright (C) 2010 Elias Showk
 #
@@ -17,33 +15,27 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 __author__="elishowk@nonutc.fr"
+__all__ = ['format', 'auth']
 
-import getopt
-import sys
+class SporeMiddleware(object):
+    """
+    Wrapper of a request
+    Interface before and after method
+    """
+    def __init__(self, request, spec, *args, **kwargs):
+        self.request = request
+        self.spec = spec
+        for name in set(dir(request)) - set(dir(self)):
+            setattr(self, name, getattr(request, name))
 
-import spore
+    def __call__(self, *args, **kwargs):
+        """
+        A do-nothing wrapper
+        """
+        return self.request(*args, **kwargs)
 
-def usage():
-    print "USAGE : python spore.py config_file_path"
-
-if __name__ == "__main__":
-
-    opts, args = getopt.getopt(sys.argv[1:],'')
-
-    if len(args) < 1:
-        usage()
-        exit()
-
-    configURL = args[0]
-
-    try:
-        spore_instance = spore.SporeCore(configURL)
-    except Exception, exc:
-        print exc
-        usage()
-        exit()
-
-    print spore_instance.spec
-    # TODO : parse confFile for every method defined
-    req = spore_instance.public_timeline()
-    print req
+    #def response_cb(self, callback):
+        """
+        a do-nothing callback
+        """
+    #    return callback(*arg, **kwargs)

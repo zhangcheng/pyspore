@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 # -*- coding: utf-8 -*-
 #  Copyright (C) 2010 Elias Showk
 #
@@ -17,33 +15,9 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 __author__="elishowk@nonutc.fr"
+from spore.middleware.format import SporeFormat
 
-import getopt
-import sys
+from xml.dom.minidom import parseString as decode
 
-import spore
-
-def usage():
-    print "USAGE : python spore.py config_file_path"
-
-if __name__ == "__main__":
-
-    opts, args = getopt.getopt(sys.argv[1:],'')
-
-    if len(args) < 1:
-        usage()
-        exit()
-
-    configURL = args[0]
-
-    try:
-        spore_instance = spore.SporeCore(configURL)
-    except Exception, exc:
-        print exc
-        usage()
-        exit()
-
-    print spore_instance.spec
-    # TODO : parse confFile for every method defined
-    req = spore_instance.public_timeline()
-    print req
+class XML(SporeFormat):
+    pass
