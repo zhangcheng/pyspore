@@ -19,7 +19,7 @@ __all__ = ['format', 'auth']
 
 class SporeMiddleware(object):
     """
-    Wrapper of a request
+    Wrapper of a SporeRequest
     Interface before and after method
     """
     def __init__(self, request, spec, *args, **kwargs):
@@ -34,8 +34,10 @@ class SporeMiddleware(object):
         """
         return self.request(*args, **kwargs)
 
-    #def response_cb(self, callback):
+class SporeMiddlewareCallback(SporeMiddleware):
+
+    def __call__(self, *args, **kwargs):
         """
         a do-nothing callback
         """
-    #    return callback(*arg, **kwargs)
+        return []

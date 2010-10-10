@@ -73,6 +73,20 @@ class SporeSpec(dict):
         for x in config:
             self[x]=config[x]
 
+    def get_httpmethod(self, methodname):
+        return str(self['methods'][methodname]['method'])
+
+    def get_api_base_url(self):
+        return str(self['api_base_url'])
+
+    def get_method_path(self, methodname):
+        return str(self['methods'][methodname]['path'])
+
+    def get_api_format_mode(self):
+        return str(self['declare']['api_format_mode'])
+
+    def get_api_format(self):
+        return str(self['declare']['api_format'])
 
 class SporeRequestBody(object):
     implements(IBodyProducer)
@@ -103,18 +117,19 @@ class SporeResponse(Protocol):
         self.request = request
         self.content = ""
 
-
     def dataReceived(self, bytes):
         """
         Callback on the data received event
         """
+        print "dataReceived..."
+        print bytes
         self.content += bytes
 
     def connectionLost(self, reason):
         """
-        End of the request attached to the parser
+        End of the request
         """
-        #print 'Finished receiving body: ', reason.getErrorMessage()
+        print 'Finished receiving body: ', reason.getErrorMessage()
         self.deferred.callback(None)
 
 
@@ -126,7 +141,7 @@ class SporeHeaders(Headers):
         Headers.__init__(self,
             {
                 'User-Agent': ['pyspore'],
-                'Content-Type': [str(spec['declare']['api_format'])]
+                'Content-Type': [spec.get_api_format()]
             }
         )
 
@@ -140,26 +155,26 @@ class SporeRequest(object):
         self.headers = SporeHeaders(self.spec)
         # TODO body and authentication
         self.body = None
-        self.url = self._geturl()
+        self.url = self._get_url()
+        self.callbacks = []
         # twisted agent stuff
         agent = Agent(reactor)
         self.request = agent.request(
-            str(self.spec['methods'][methodname]['method']),
+            str(self.spec.get_httpmethod(self.methodname)),
             self.url,
             self.headers,
             self.body
         )
-        self.request.addCallback(self.cbRequest)
-        self.request.addBoth(self.cbShutdown)
+        self.request.addCallback(self.cb_request)
+        self.request.addBoth(self.cb_shutdown)
 
     def __call__(self, *args, **kwargs):
         """
-        before request middlewares
-        then run !
+        runs the request
         """
         reactor.run()
 
-    def cbRequest(self, response):
+    def _cb_request(self, response):
         """
         base callback with response object
         calls chained middlewares
@@ -167,7 +182,7 @@ class SporeRequest(object):
         response is fired by Deferred()
         http://twistedmatrix.com/documents/current/core/howto/defer.html
         """
-        self.twistedresponse = response
+        #self.twistedresponse = response
         print 'Response version:', response.version
         print 'Response code:', response.code
         print 'Response phrase:', response.phrase
@@ -175,33 +190,40 @@ class SporeRequest(object):
         #print pformat(list(response.headers.getAllRawHeaders()))
         # response asynchrone handler
         deferred = Deferred()
-        self.sporeresponse = SporeResponse(self, deferred)
-        response.deliverBody(self.sporeresponse)
+        self.response = SporeResponse(self, deferred)
+        response.deliverBody(self.response)
         return deferred
 
-    def cbShutdown(self, ignored):
+    def _cb_shutdown(self, ignored):
         """
         Tells the reator request is finished
         """
+        for cb in reverse(self.callbacks):
+            cb(self.response)
         reactor.stop()
-        self.sporeresponse()
 
-    def _geturl(self):
+    def _get_url(self):
         """
         forms the request url
         """
-        url = self.spec['declare']['api_base_url'] + self.spec['methods'][self.methodname]['path']
-        if self.spec['declare']['api_format_mode'] == 'append':
-            return str( url + "." + self.spec['declare']['api_format'])
+        url = self.spec.get_api_base_url() + self.spec.get_method_path(self.methodname)
+        if self.spec.api_format_mode() == 'append':
+            return url + "." + self.spec.api_format_mode()
         else:
-            return str(url)
+            return url
 
 class SporeCore(object):
-    def __init__(self, path):
-        self.new_from_spec(path)
+    def __init__(self, path, *arg, **kwargs):
+        """
+        optional arguments to overwrite specification contents
+        """
+        self.new_from_spec(path, *args, **kwargs)
 
-    def new_from_spec(self, path):
-        self.spec = SporeSpec(path)
+    def new_from_spec(self, path, *args, **kwargs):
+        """
+        attach to SporeCore callable SporeRequest read from the spec
+        """
+        self.spec = SporeSpec(path, *arg, **kwargs)
         for methodname, methodspec in self.spec['methods'].iteritems():
             setattr( self, methodname, SporeRequest(self.spec, methodname) )
 
