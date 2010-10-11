@@ -18,7 +18,7 @@
 
 __author__="elishowk@nonutc.fr"
 
-__all__ = ['middleware']
+__all__ = ['middleware','sporespec']
 
 from pprint import pformat
 
@@ -40,53 +40,8 @@ import json
 import yaml
 
 from spore.middleware import *
+from spore import *
 
-class SporeSpec(dict):
-    def __init__(self,url):
-        """
-        Spore reader
-        handle files adressed by path and optionally by protocol
-        """
-        dict.__init__(self)
-        format = url.split(".")[1]
-        config = {}
-        raw = ""
-        try:
-            if url[:7] == "file://":
-                url = url[7:]
-            raw = open(url)
-        except:
-            try:
-                import urllib2
-                raw = urllib2.urlopen(url).read()
-            except  Exception, e:
-                raise Exception("couldn't open %s: %s"%(url,e))
-
-        if format in ["yaml","yml","json"]:
-            try:
-                config = __import__(format).load(raw)
-            except Exception, e:
-                raise Exception("couldn't parse config file: %s"%(e))
-        else:
-            raise NotImplemented("format %s not recognized"%format)
-
-        for x in config:
-            self[x]=config[x]
-
-    def get_httpmethod(self, methodname):
-        return str(self['methods'][methodname]['method'])
-
-    def get_api_base_url(self):
-        return str(self['api_base_url'])
-
-    def get_method_path(self, methodname):
-        return str(self['methods'][methodname]['path'])
-
-    def get_api_format_mode(self):
-        return str(self['declare']['api_format_mode'])
-
-    def get_api_format(self):
-        return str(self['declare']['api_format'])
 
 class SporeRequestBody(object):
     implements(IBodyProducer)
@@ -213,7 +168,7 @@ class SporeRequest(object):
             return url
 
 class SporeCore(object):
-    def __init__(self, path, *arg, **kwargs):
+    def __init__(self, path, *args, **kwargs):
         """
         optional arguments to overwrite specification contents
         """
@@ -223,7 +178,7 @@ class SporeCore(object):
         """
         attach to SporeCore callable SporeRequest read from the spec
         """
-        self.spec = SporeSpec(path, *arg, **kwargs)
+        self.spec = sporespec.SporeSpec(path, *args, **kwargs)
         for methodname, methodspec in self.spec['methods'].iteritems():
             setattr( self, methodname, SporeRequest(self.spec, methodname) )
 
