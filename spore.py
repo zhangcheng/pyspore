@@ -20,7 +20,7 @@ __author__="elishowk@nonutc.fr"
 
 import getopt
 import sys
-
+from pprint import pformat
 import spore
 
 def usage():
@@ -44,5 +44,5 @@ if __name__ == "__main__":
 
     print spore_instance.spec
     # TODO : parse confFile for every method defined
-    req = spore_instance.public_timeline()
+    req = spore_instance.askhn_posts()
     print req

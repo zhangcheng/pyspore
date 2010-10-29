@@ -14,8 +14,9 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-__author__="elishowk@nonutc.fr"
-__all__ = ['format', 'auth']
+__author__ = "elishowk@nonutc.fr"
+
+__all__ = ['format', 'auth', 'headers', 'body']
 
 class SporeMiddleware(object):
     """
@@ -25,19 +26,19 @@ class SporeMiddleware(object):
     def __init__(self, request, spec, *args, **kwargs):
         self.request = request
         self.spec = spec
-        for name in set(dir(request)) - set(dir(self)):
-            setattr(self, name, getattr(request, name))
+        #for name in set(dir(request)) - set(dir(self)):
+        #    setattr(self, name, getattr(request, name))
 
     def __call__(self, *args, **kwargs):
         """
         A do-nothing wrapper
         """
-        return self.request(*args, **kwargs)
+        return self.request
 
 class SporeMiddlewareCallback(SporeMiddleware):
 
     def __call__(self, *args, **kwargs):
         """
-        a do-nothing callback
+        a do-nothing callback middleware, does not add any callback
         """
         return []
