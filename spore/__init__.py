@@ -51,6 +51,7 @@ class SporeRequest(object):
         self.spec = spec
         self.methodname = methodname
         host = self.spec.get_api_base_url()
+        print host
         self.connection = httplib.HTTPConnection(host)
         # add_middleware here
 
@@ -58,6 +59,8 @@ class SporeRequest(object):
         """
         runs through all middlewares the request and returns the response
         """
+        # middleware, callbacks
+        # dernier middleware == request()
         self.connection.request(
             self.spec.get_httpmethod(self.methodname),
             self.construct_url(**kwargs),
@@ -76,7 +79,7 @@ class SporeRequest(object):
     def add_middleware(self):
         pass
 
-    def construct_url(self, strict=False, **request_kw_args):
+    def construct_url(self, **request_kw_args):
         """
         forms the request url
         """
@@ -84,10 +87,11 @@ class SporeRequest(object):
         required = self.spec.get_method_required(self.methodname)
         for k in required:
             if k not in request_kw_args: raise Exception("missing required arg %s"%k)
-        allargs = list( set(required) & set(self.spec.get_method_optional(self.methodname)))
+        #allargs = list( set(required) & set(self.spec.get_method_optional(self.methodname)))
         for key, value in request_kw_args:
-            if strict is True and key not in allargs: continue
-            re.sub( ":%s"%key, value, url)
+            #if strict is True and key not in allargs: continue
+            url = re.sub(r":%s"%key, value, url)
+        url = re.sub(r"(:\w+/?)*$", "", url)
         return url
 
 

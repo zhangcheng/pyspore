@@ -68,7 +68,7 @@ class SporeSpec(dict):
         """
         minimum check of required SPORE spec parameters
         """
-        for param in ['api_format','api_base_url','methods']:
+        for param in ['formats','base_url','methods']:
             if param not in self:
                 raise Exception("missing required spore parameter : %s"%param)
         for method in self['methods'].itervalues():
@@ -77,13 +77,13 @@ class SporeSpec(dict):
                     raise Exception("missing required spore parameter : %s"%methodparam)
 
     def get_httpmethod(self, methodname):
-        return str(self['methods'][methodname]['method'])
+        return self['methods'][methodname]['method']
 
     def get_api_base_url(self):
-        return str(self['api_base_url'])
+        return self['base_url']
 
     def get_method_path(self, methodname):
-        return str(self['methods'][methodname]['path'])
+        return self['methods'][methodname]['path']
 
     def get_api_format(self):
         """
@@ -95,10 +95,12 @@ class SporeSpec(dict):
         """
         returns the list of required arguments
         """
-        return self['methods'][methodname]['required']
+        if 'required_params' in self['methods'][methodname]: return self['methods'][methodname]['required_params']
+        else: return []
 
     def get_method_optional(self, methodname):
         """
         returns the list of optional arguments
         """
-        return self['methods'][methodname]['params']
+        if 'optional_params' in self['methods'][methodname]: return self['methods'][methodname]['optional_params']
+        else: return []
