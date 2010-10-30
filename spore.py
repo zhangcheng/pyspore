@@ -41,8 +41,6 @@ if __name__ == "__main__":
         print exc
         usage()
         exit()
-
-    print spore_instance.spec
     # TODO : parse confFile for every method defined
     req = spore_instance.askhn_posts()
     print req

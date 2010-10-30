@@ -66,7 +66,7 @@ class SporeSpec(dict):
 
     def _check_required(self):
         """
-        checks required SPORE spec parameters
+        minimum check of required SPORE spec parameters
         """
         for param in ['api_format','api_base_url','methods']:
             if param not in self:
@@ -90,3 +90,15 @@ class SporeSpec(dict):
         returns the list of authorized formats
         """
         return self['api_format']
+
+    def get_method_required(self, methodname):
+        """
+        returns the list of required arguments
+        """
+        return self['methods'][methodname]['required']
+
+    def get_method_optional(self, methodname):
+        """
+        returns the list of optional arguments
+        """
+        return self['methods'][methodname]['params']
