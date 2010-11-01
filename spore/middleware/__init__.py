@@ -16,29 +16,17 @@
 
 __author__ = "elishowk@nonutc.fr"
 
-__all__ = ['format', 'auth', 'headers', 'body']
+__all__ = ['format', 'auth', 'headers', 'body', 'run']
 
 class SporeMiddleware(object):
     """
-    Wrapper of a SporeRequest
-    Interface before and after method
+    Abstract class
     """
-    def __init__(self, request, spec, *args, **kwargs):
+    def __init__(self, request):
         self.request = request
-        self.spec = spec
-        #for name in set(dir(request)) - set(dir(self)):
-        #    setattr(self, name, getattr(request, name))
 
     def __call__(self, *args, **kwargs):
         """
         A do-nothing wrapper
         """
         return self.request
-
-class SporeMiddlewareCallback(SporeMiddleware):
-
-    def __call__(self, *args, **kwargs):
-        """
-        a do-nothing callback middleware, does not add any callback
-        """
-        return []

@@ -23,13 +23,10 @@ class SporeHeaders(SporeMiddleware):
     """
     middleware that sets the request's headers
     """
-
     def _set_header(self, request, key, value):
-        self.request.header.append(key, value)
+        self.request.headers.append(key, value)
 
     def __call__(self, *args, **kwargs):
-        self._set_header( request, 'Content-Type', spec.get_api_format() )
-        for key, value in kwargs.iteritems():
-            self._set_request(request, key, value)
+        #self._set_header( self.request, 'Content-Type', self.spec.get_api_format() )
         return self.request
 

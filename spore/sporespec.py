@@ -89,7 +89,7 @@ class SporeSpec(dict):
         """
         returns the list of authorized formats
         """
-        return self['api_format']
+        return self['formats']
 
     def get_method_required(self, methodname):
         """

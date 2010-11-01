@@ -20,4 +20,12 @@ from spore.middleware import SporeMiddleware
 
 
 class SporeRequestBody(SporeMiddleware):
-    pass
+    """
+    Sets the request body
+    """
+    def __call__(self, *args, **kwargs):
+        """
+        Fills the body dict with kwargs
+        """
+        self.request.body.update( kwargs )
+        return self.request

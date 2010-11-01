@@ -18,82 +18,51 @@
 
 __author__="elishowk@nonutc.fr"
 
-__all__ = ['middleware','sporespec']
+__all__ = ['middleware','callback','sporespec','response']
 
 from spore.middleware import *
+from spore.callback import *
 from spore import *
 
 import httplib
-import urllib
-import re
-
-class SporeResponse(object):
-    def __init__(self, spec, callbacks=None):
-        self.spec = spec
-        if callbacks is None:
-            self.callbacks = []
-        else:
-            # loop and add_callbacks
-            pass
-
-    def add_callback(self):
-        pass
-
-    def __call__(self, httpresponse):
-        return httpresponse.read()
 
 
 class SporeRequest(object):
     def __init__(self, spec, methodname, **request_kw_args):
         """
-        creates a request agent following spec
+        creates a request and prepares the middleware sta
         """
         self.spec = spec
         self.methodname = methodname
-        host = self.spec.get_api_base_url()
-        print host
-        self.connection = httplib.HTTPConnection(host)
-        # add_middleware here
+        self.host = self.spec.get_api_base_url()
+        self.body = {}
+        self.headers = {}
+        self.connection = httplib.HTTPConnection(self.host)
+        self.before = [run.SporeRun, body.SporeRequestBody, headers.SporeHeaders]
+        self.callbacks = []
 
     def __call__(self, *args, **kwargs):
         """
-        runs through all middlewares the request and returns the response
+        runs all middlewares
+        kwargs are client argument of the request
         """
         # middleware, callbacks
         # dernier middleware == request()
-        self.connection.request(
-            self.spec.get_httpmethod(self.methodname),
-            self.construct_url(**kwargs),
-            self.get_body(),
-            self.get_headers()
-        )
-        resp = SporeResponse(self.spec)
-        return resp(self.connection.getresponse())
+        # si un middleware renvoit :
+        ## un objet SporeResponse: stop execution middleware, passe aux callbacks
+        ## un objet Callback : empile la CB dans la file.
+        self.before.reverse()
+        returnValue = None
+        for middleware in self.before:
+            returnValue = middleware(self)(*args, **kwargs)
+            if isinstance(returnValue, response.SporeResponse): break
+            if isinstance(returnValue, SporeCallback):
+                self.callback += [returnValue]
 
-    def get_body(self):
-        return None
-
-    def get_headers(self):
-        return {}
-
-    def add_middleware(self):
-        pass
-
-    def construct_url(self, **request_kw_args):
-        """
-        forms the request url
-        """
-        url = self.spec.get_method_path(self.methodname)
-        required = self.spec.get_method_required(self.methodname)
-        for k in required:
-            if k not in request_kw_args: raise Exception("missing required arg %s"%k)
-        #allargs = list( set(required) & set(self.spec.get_method_optional(self.methodname)))
-        for key, value in request_kw_args:
-            #if strict is True and key not in allargs: continue
-            url = re.sub(r":%s"%key, value, url)
-        url = re.sub(r"(:\w+/?)*$", "", url)
-        return url
-
+        self.callbacks.reverse()
+        for callback in self.callbacks:
+            returnValue = callback(returnValue)
+        return returnValue()
 
 class SporeCore(object):
     def __init__(self, path, *args, **kwargs):
