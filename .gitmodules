@@ -1,3 +1,6 @@
 [submodule "api-description"]
 	path = api-description
 	url = git://github.com/SPORE/api-description.git
+[submodule "specifications"]
+	path = specifications
+	url = http://github.com/SPORE/specifications.git
